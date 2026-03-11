@@ -230,24 +230,31 @@ class ApiService {
     required String token,
     required int tripId,
     required String status,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final url = Uri.parse('$baseUrl/driver/status');
-      
+
+      final body = <String, String>{
+        'trip_id': tripId.toString(),
+        'status': status,
+      };
+      if (latitude != null) body['latitude'] = latitude.toString();
+      if (longitude != null) body['longitude'] = longitude.toString();
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': 'Bearer $token',
         },
-        body: {
-          'trip_id': tripId.toString(),
-          'status': status,
-        },
+        body: body,
       );
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        print('Trip status update successful: trip_id: $tripId, status: $status, location: (${latitude ?? 'N/A'}, ${longitude ?? 'N/A'})');
         return jsonData['success'] ?? false;
       } else if (response.statusCode == 401) {
         // Unauthorized - token is invalid or expired

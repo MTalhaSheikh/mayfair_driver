@@ -1,3 +1,4 @@
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:limo_guy/controllers/home_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -300,19 +301,25 @@ TripProgressStage? _stageFromStatus(String status) {
 
       print('🔄 Updating trip ${trip.id} to status: $status');
 
+      double? latitude;
+      double? longitude;
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        latitude = position.latitude;
+        longitude = position.longitude;
+      } catch (e) {
+        print('Could not get position for status update: $e');
+      }
+
       final success = await _apiService.updateTripStatus(
         token: token,
         tripId: trip.id,
         status: status,
+        latitude: latitude,
+        longitude: longitude,
       );
-
-      // if (success) {
-      //   print('✅ API update successful');
-      //   // CRITICAL: Save locally immediately after API success
-      //   await _saveTripStatusLocally(trip.id, status);
-      // } else {
-      //   print('❌ API update failed');
-      // }
 
       return success;
     } on ApiException catch (e) {
