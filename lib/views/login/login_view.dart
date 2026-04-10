@@ -77,15 +77,9 @@ class _DriverLoginScreenState extends State<_DriverLoginScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            AppTexts.limoGuy,
-            style: AppTheme.loginTitle,
-          ),
+          Text(AppTexts.limoGuy, style: AppTheme.loginTitle),
           const SizedBox(height: 4),
-          Text(
-            AppTexts.signInSubtitle,
-            style: AppTheme.loginSubtitle,
-          ),
+          Text(AppTexts.signInSubtitle, style: AppTheme.loginSubtitle),
           const SizedBox(height: 32),
 
           // Email field
@@ -167,7 +161,9 @@ class _DriverLoginScreenState extends State<_DriverLoginScreen> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.portalOlive,
-                  disabledBackgroundColor: AppColors.portalOlive.withOpacity(0.6),
+                  disabledBackgroundColor: AppColors.portalOlive.withOpacity(
+                    0.6,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(32),
                   ),
@@ -179,7 +175,9 @@ class _DriverLoginScreenState extends State<_DriverLoginScreen> {
                         width: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(
@@ -210,10 +208,7 @@ class _DriverLoginScreenState extends State<_DriverLoginScreen> {
               SizedBox(width: 8),
               Text(
                 AppTexts.needHelp,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
             ],
           ),
