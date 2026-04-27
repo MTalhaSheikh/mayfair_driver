@@ -28,6 +28,7 @@ class TripMapPreview extends StatefulWidget {
 class _TripMapPreviewState extends State<TripMapPreview> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
+  bool _hasLocationPermission = false;
   bool _isLoading = true;
   final Set<Marker> _markers = {};
 
@@ -39,6 +40,22 @@ class _TripMapPreviewState extends State<TripMapPreview> {
 
   Future<void> _getCurrentLocation() async {
     try {
+      // Always show trip markers even if user denies location permission.
+      _markers.addAll([
+        Marker(
+          markerId: const MarkerId('pickup_location'),
+          position: widget.pickupLocation,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: 'Pickup Location'),
+        ),
+        Marker(
+          markerId: const MarkerId('dropoff_location'),
+          position: widget.dropOffLocation,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: 'Drop-off Location'),
+        ),
+      ]);
+
       // Request location permission
       final status = await Permission.location.request();
       if (!status.isGranted) {
@@ -63,6 +80,7 @@ class _TripMapPreviewState extends State<TripMapPreview> {
       );
 
       setState(() {
+        _hasLocationPermission = true;
         _currentPosition = position;
         _isLoading = false;
 
@@ -78,29 +96,6 @@ class _TripMapPreviewState extends State<TripMapPreview> {
           ),
         );
 
-        // Add pickup location marker
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('pickup_location'),
-            position: widget.pickupLocation,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen,
-            ),
-            infoWindow: const InfoWindow(title: 'Pickup Location'),
-          ),
-        );
-
-        // Add drop-off location marker
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('dropoff_location'),
-            position: widget.dropOffLocation,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueRed,
-            ),
-            infoWindow: const InfoWindow(title: 'Drop-off Location'),
-          ),
-        );
       });
 
       // Move camera to show both pickup and drop-off locations
@@ -179,7 +174,7 @@ class _TripMapPreviewState extends State<TripMapPreview> {
                       zoom: 15.0,
                     ),
                     markers: _markers,
-                    myLocationEnabled: true,
+                    myLocationEnabled: _hasLocationPermission,
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: false,
                     mapToolbarEnabled: false,

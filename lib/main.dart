@@ -11,6 +11,7 @@ void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
   
+  
   // Set preferred orientations (optional - portrait only)
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
