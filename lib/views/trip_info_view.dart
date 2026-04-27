@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:limo_guy/controllers/detail_controller.dart';
 import '../controllers/trip_info_controller.dart';
 import '../core/app_colors.dart';
@@ -8,7 +7,6 @@ import '../core/app_theme.dart';
 import '../utils/phone_launcher.dart';
 import '../views/widgets/passenger_contact_card.dart';
 import '../views/widgets/slide_action_button.dart';
-import '../views/widgets/trip_map_preview.dart';
 import '../views/widgets/trip_points_card.dart';
 
 class TripInfoView extends StatelessWidget {
@@ -53,17 +51,6 @@ class TripInfoView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TripMapPreview(
-                          pickupLocation: LatLng(
-                            tripInfoController.trip.pickupLat,
-                            tripInfoController.trip.pickupLng,
-                          ),
-                          dropOffLocation: LatLng(
-                            tripInfoController.trip.dropoffLat,
-                            tripInfoController.trip.dropoffLng,
-                          ),
-                        ),
-                        const SizedBox(height: 15),
                         Text(
                           tripInfoController.scheduledLabel.value,
                           style: AppTheme.tripTime,
@@ -76,6 +63,10 @@ class TripInfoView extends StatelessWidget {
                           dropoffSubtitle: tripInfoController.dropoffSubtitle.value,
                           miles: tripInfoController.distanceMiles.value,
                           mins: tripInfoController.durationMins.value,
+                          pickupLat: tripInfoController.trip.pickupLat,
+                          pickupLng: tripInfoController.trip.pickupLng,
+                          dropoffLat: tripInfoController.trip.dropoffLat,
+                          dropoffLng: tripInfoController.trip.dropoffLng,
                         ),
                         const SizedBox(height: 10),
                         PassengerContactCard(

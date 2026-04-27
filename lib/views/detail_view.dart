@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../controllers/detail_controller.dart';
 import '../core/app_colors.dart';
 import '../core/app_theme.dart';
 import '../models/trip_model.dart';
 import '../utils/phone_launcher.dart';
-import 'widgets/trip_map_preview.dart';
 import 'widgets/trip_points_card.dart';
 import 'widgets/passenger_contact_card.dart';
 
@@ -49,19 +47,6 @@ class DetailView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Map preview (expand uses Navigator.push to MapView; /map route is not registered)
-                        TripMapPreview(
-                          pickupLocation: LatLng(
-                            controller.trip.pickupLat,
-                            controller.trip.pickupLng,
-                          ),
-                          dropOffLocation: LatLng(
-                            controller.trip.dropoffLat,
-                            controller.trip.dropoffLng,
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-
                         // Date and time
                         Text(
                           controller.scheduledLabel.value,
@@ -77,6 +62,10 @@ class DetailView extends StatelessWidget {
                           dropoffSubtitle: controller.dropoffSubtitle.value,
                           miles: controller.distanceMiles.value,
                           mins: controller.durationMins.value,
+                          pickupLat: controller.trip.pickupLat,
+                          pickupLng: controller.trip.pickupLng,
+                          dropoffLat: controller.trip.dropoffLat,
+                          dropoffLng: controller.trip.dropoffLng,
                         ),
                         const SizedBox(height: 10),
 

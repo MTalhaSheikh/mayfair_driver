@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_texts.dart';
 import '../../core/app_theme.dart';
+import '../../utils/map_launcher.dart';
 
 class TripPointsCard extends StatelessWidget {
   final String pickupTitle;
@@ -12,6 +13,12 @@ class TripPointsCard extends StatelessWidget {
   final double? miles;
   final int? mins;
 
+  // Optional coordinates — when provided, a map icon is shown on each row.
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? dropoffLat;
+  final double? dropoffLng;
+
   const TripPointsCard({
     super.key,
     required this.pickupTitle,
@@ -20,6 +27,10 @@ class TripPointsCard extends StatelessWidget {
     required this.dropoffSubtitle,
     this.miles,
     this.mins,
+    this.pickupLat,
+    this.pickupLng,
+    this.dropoffLat,
+    this.dropoffLng,
   });
 
   @override
@@ -46,6 +57,14 @@ class TripPointsCard extends StatelessWidget {
             title: pickupTitle,
             subtitle: pickupSubtitle,
             showConnector: true,
+            onMapTap: (pickupLat != null && pickupLng != null)
+                ? () => showMapChooser(
+                      context,
+                      lat: pickupLat!,
+                      lng: pickupLng!,
+                      label: pickupTitle,
+                    )
+                : null,
           ),
           const SizedBox(height: 14),
           _PointRow(
@@ -55,6 +74,14 @@ class TripPointsCard extends StatelessWidget {
             title: dropoffTitle,
             subtitle: dropoffSubtitle,
             showConnector: false,
+            onMapTap: (dropoffLat != null && dropoffLng != null)
+                ? () => showMapChooser(
+                      context,
+                      lat: dropoffLat!,
+                      lng: dropoffLng!,
+                      label: dropoffTitle,
+                    )
+                : null,
           ),
           if (miles != null || mins != null) ...[
             const SizedBox(height: 16),
@@ -75,12 +102,6 @@ class TripPointsCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                // if (mins != null) ...[
-                //   const Icon(Icons.timer_outlined,
-                //       size: 18, color: AppColors.portalOlive),
-                //   const SizedBox(width: 10),
-                //   Text('~$mins ${AppTexts.mins}', style: AppTheme.metaText),
-                // ],
                 if (mins != null) ...[
                   const Icon(
                     Icons.timer_outlined,
@@ -123,6 +144,7 @@ class _PointRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool showConnector;
+  final VoidCallback? onMapTap;
 
   const _PointRow({
     required this.markerColor,
@@ -131,6 +153,7 @@ class _PointRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.showConnector,
+    this.onMapTap,
   });
 
   @override
@@ -168,6 +191,30 @@ class _PointRow extends StatelessWidget {
             ],
           ),
         ),
+        // Map icon button — only shown when coordinates are available
+        if (onMapTap != null) ...[
+          const SizedBox(width: 8),
+          Padding(
+            padding: EdgeInsets.only(top: showConnector ? 0 : 2),
+            child: InkWell(
+              onTap: onMapTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.portalOlive.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.navigation_rounded,
+                  size: 18,
+                  color: AppColors.portalOlive,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
