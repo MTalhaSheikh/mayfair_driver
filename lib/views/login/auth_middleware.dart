@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:limo_guy/controllers/login_controller.dart';
-import 'package:limo_guy/routes/app_routes.dart';
+import 'package:mayfair_driver/controllers/login_controller.dart';
+import 'package:mayfair_driver/routes/app_routes.dart';
 /// Middleware to check if user is authenticated before accessing protected routes
 class AuthMiddleware extends GetMiddleware {
   @override

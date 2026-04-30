@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
-import 'package:limo_guy/controllers/home_controller.dart';
+import 'package:mayfair_driver/controllers/home_controller.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_theme.dart';

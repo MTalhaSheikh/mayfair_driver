@@ -1,7 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:limo_guy/controllers/home_controller.dart';
-import 'package:limo_guy/controllers/login_controller.dart';
+import 'package:mayfair_driver/controllers/home_controller.dart';
+import 'package:mayfair_driver/controllers/login_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/trip_model.dart';
 import '../services/api_service.dart';

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:limo_guy/controllers/login_controller.dart';
-import 'package:limo_guy/core/app_colors.dart';
-import 'package:limo_guy/core/app_texts.dart';
-import 'package:limo_guy/core/app_theme.dart';
-import 'package:limo_guy/views/widgets/app_pill_text_field.dart';
+import 'package:mayfair_driver/controllers/login_controller.dart';
+import 'package:mayfair_driver/core/app_colors.dart';
+import 'package:mayfair_driver/core/app_texts.dart';
+import 'package:mayfair_driver/core/app_theme.dart';
+import 'package:mayfair_driver/views/widgets/app_pill_text_field.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});

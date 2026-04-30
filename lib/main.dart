@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:limo_guy/controllers/login_controller.dart';
-import 'package:limo_guy/services/location_update_service.dart';
+import 'package:mayfair_driver/controllers/login_controller.dart';
+import 'package:mayfair_driver/services/location_update_service.dart';
 import 'bindings/initial_binding.dart';
 import 'routes/app_pages.dart';
 import 'core/app_theme.dart';

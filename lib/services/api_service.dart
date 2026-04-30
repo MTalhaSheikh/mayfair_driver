@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:limo_guy/views/login/login_response';
+import 'package:mayfair_driver/views/login/login_response';
 import '../models/driver_profile_model.dart';
 import '../models/trip_model.dart';
 

@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:limo_guy/views/login/auth_middleware.dart';
+import 'package:mayfair_driver/views/login/auth_middleware.dart';
 import '../routes/app_routes.dart';
 import '../bindings/detail_binding.dart';
 import '../bindings/home_binding.dart';

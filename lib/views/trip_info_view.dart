@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:limo_guy/controllers/detail_controller.dart';
+import 'package:mayfair_driver/controllers/detail_controller.dart';
 import '../controllers/trip_info_controller.dart';
 import '../core/app_colors.dart';
 import '../core/app_theme.dart';
