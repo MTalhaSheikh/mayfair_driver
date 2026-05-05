@@ -6,6 +6,7 @@ import 'package:mayfair_driver/services/location_update_service.dart';
 import 'bindings/initial_binding.dart';
 import 'routes/app_pages.dart';
 import 'core/app_theme.dart';
+import 'services/app_update_service.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -51,6 +52,10 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Check for update on first launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService().checkForUpdate();
+    });
   }
 
   @override
@@ -65,6 +70,8 @@ class _AppLifecycleWrapperState extends State<_AppLifecycleWrapper>
       case AppLifecycleState.resumed:
         // App back in foreground — ensure location is running if logged in
         _startLocationServiceIfLoggedIn();
+        // Silently check for app updates in background
+        AppUpdateService().checkForUpdate();
         break;
       case AppLifecycleState.detached:
         // App is being killed / detached — stop location updates

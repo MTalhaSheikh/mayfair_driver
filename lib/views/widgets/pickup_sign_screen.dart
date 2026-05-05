@@ -8,7 +8,7 @@ class PickupSignScreen extends StatefulWidget {
   const PickupSignScreen({
     super.key,
     required this.passengerName,
-    this.companyName = 'MayFair Limouisine',
+    this.companyName = 'MayFair Driver',
   });
 
   @override

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:mayfair_driver/controllers/home_controller.dart';
@@ -353,112 +356,131 @@ TripProgressStage? _stageFromStatus(String status) {
     }
   }
 
-  /// Advance to next stage - MAIN ACTION
+  // ─── Internet connectivity check ────────────────────────────────────────────
+
+  Future<bool> _hasInternet() async {
+    try {
+      final result = await Connectivity().checkConnectivity();
+      return result != ConnectivityResult.none;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ─── Optimistic status advance ───────────────────────────────────────────────
+  /// Advance to next stage instantly (optimistic), then sync to API in background.
+  /// If offline → show error and rollback. No loading indicator shown to user.
   void advanceStage() async {
-    // Prevent multiple simultaneous updates
-    if (isUpdatingStatus.value) {
-      print('⚠️ Update already in progress, ignoring...');
+    if (isUpdatingStatus.value) return;
+
+    // ── 1. Check internet BEFORE doing anything ──────────────────────────────
+    final online = await _hasInternet();
+    if (!online) {
+      Get.snackbar(
+        'No Internet',
+        'Please check your connection and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 3),
+        backgroundColor: const Color(0xFFEF4444),
+        colorText: const Color(0xFFFFFFFF),
+      );
       return;
     }
 
+    // ── 2. Capture old stage for rollback ────────────────────────────────────
+    final previousStage = stage.value;
+
+    // ── 3. Compute next stage & messages ────────────────────────────────────
+    TripProgressStage nextStage;
+    String apiStatus;
+    String localStatus;
+    String snackTitle;
+    String snackMessage;
+
+    switch (stage.value) {
+      case TripProgressStage.onTheWay:
+        nextStage = TripProgressStage.arrived;
+        apiStatus = _getApiStatusForStage(TripProgressStage.onTheWay);
+        localStatus = 'arrived';
+        snackTitle = 'On The Way';
+        snackMessage = 'You are on the way to pickup location';
+        break;
+      case TripProgressStage.arrived:
+        nextStage = TripProgressStage.pickPassenger;
+        apiStatus = _getApiStatusForStage(TripProgressStage.arrived);
+        localStatus = 'picked_up';
+        snackTitle = 'Arrived';
+        snackMessage = 'You have arrived at pickup location';
+        break;
+      case TripProgressStage.pickPassenger:
+        nextStage = TripProgressStage.finishedTrip;
+        apiStatus = _getApiStatusForStage(TripProgressStage.pickPassenger);
+        localStatus = 'completed';
+        snackTitle = 'Passenger Picked Up';
+        snackMessage = 'Passenger has been picked up';
+        break;
+      case TripProgressStage.finishedTrip:
+        // Final stage — navigate back immediately, sync in background
+        Get.back();
+        _syncFinalStageInBackground();
+        return;
+    }
+
+    // ── 4. Update UI instantly (optimistic) ──────────────────────────────────
+    stage.value = nextStage;
+    update();
+    await _saveTripStatusLocally(trip.id, localStatus);
+
+    if (nextStage == TripProgressStage.arrived) {
+      await Get.find<LocationUpdateService>().setActiveTripId(trip.id);
+    }
+
+    Get.snackbar(
+      snackTitle,
+      snackMessage,
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+    );
+
+    // ── 5. Sync to API silently in background ────────────────────────────────
     isUpdatingStatus.value = true;
-    print('⏩ Advancing from stage: ${stage.value}');
-
     try {
-      switch (stage.value) {
-        case TripProgressStage.onTheWay:
-          // Stage 1 → 2: On the way → Arrived (driver taps "On the way" to start the trip)
-          final newStatus = _getApiStatusForStage(TripProgressStage.onTheWay);
-          final success = await _updateTripStatusApi(newStatus);
-
-          if (success) {
-            // Pass trip id with location API once driver has started the trip
-            await Get.find<LocationUpdateService>().setActiveTripId(trip.id);
-            stage.value = TripProgressStage.arrived;
-            update();
-            print("stage: ${stage.value}");
-            await _saveTripStatusLocally(trip.id, "arrived");
-            Get.snackbar(
-              'Status Updated',
-              'You are on the way to pickup location',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 2),
-            );
-          }
-          break;
-
-        case TripProgressStage.arrived:
-          // Stage 2 → 3: Arrived → Pick Passenger
-          final newStatus = _getApiStatusForStage(
-            TripProgressStage.arrived,
-          );
-          final success = await _updateTripStatusApi(newStatus);
-
-          if (success) {
-            stage.value = TripProgressStage.pickPassenger;
-            update();
-            print("stage: ${stage.value}");
-            await _saveTripStatusLocally(trip.id, "picked_up");
-            Get.snackbar(
-              'Status Updated',
-              'You have arrived at pickup location',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 2),
-            );
-          }
-          break;
-
-        case TripProgressStage.pickPassenger:
-          // Stage 2 → 3: Arrived → Pick Passenger
-          final newStatus = _getApiStatusForStage(
-            TripProgressStage.pickPassenger,
-          );
-          final success = await _updateTripStatusApi(newStatus);
-
-          if (success) {
-            stage.value = TripProgressStage.finishedTrip;
-            update();
-            print("stage: ${stage.value}");
-            await _saveTripStatusLocally(trip.id, "completed");
-            Get.snackbar(
-              'Status Updated',
-              'Passenger picked up',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 2),
-            );
-          }
-          break;
-
-        case TripProgressStage.finishedTrip:
-          final HomeController homeController = Get.find<HomeController>();
-          // Stage 4: Actually complete the trip via API
-          final newStatus = _getApiStatusForStage(
-            TripProgressStage.finishedTrip,
-          );
-          final success = await _updateTripStatusApi(newStatus);
-           Get.back();
-          if (success) {
-            homeController.refreshTrips();
-            Get.snackbar(
-              'Trip Completed',
-              'Trip has been marked as completed',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 2),
-            );
-
-            // Clear local storage when trip is completed
-            await _clearTripStatus(trip.id);
-          }
-          break;
+      final success = await _updateTripStatusApi(apiStatus);
+      if (!success) {
+        // Rollback UI if API failed
+        stage.value = previousStage;
+        update();
+        await _saveTripStatusLocally(trip.id, _getApiStatusForStage(previousStage));
+        Get.snackbar(
+          'Sync Failed',
+          'Status could not be saved. Reverted. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3),
+          backgroundColor: const Color(0xFFEF4444),
+          colorText: const Color(0xFFFFFFFF),
+        );
       }
     } finally {
       isUpdatingStatus.value = false;
     }
   }
 
+  /// Fire-and-forget the final "completed" API call after navigating away.
+  void _syncFinalStageInBackground() async {
+    try {
+      final apiStatus = _getApiStatusForStage(TripProgressStage.finishedTrip);
+      final success = await _updateTripStatusApi(apiStatus);
+      if (success) {
+        if (Get.isRegistered<HomeController>()) {
+          Get.find<HomeController>().refreshTrips();
+        }
+        await _clearTripStatus(trip.id);
+      }
+    } catch (_) {}
+  }
+
   @override
   void onClose() {
-    // Clear trip ID when trip ends / leaving trip screen
     Get.find<LocationUpdateService>().setActiveTripId(null);
     super.onClose();
   }

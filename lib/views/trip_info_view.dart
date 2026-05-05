@@ -210,7 +210,8 @@ class TripInfoView extends StatelessWidget {
                   child: SlideActionButton(
                     label: tripInfoController.stageTitle,
                     leadingIcon: _stageIcon(tripInfoController.stage.value),
-                    isLoading: tripInfoController.isUpdatingStatus.value,
+                    // isLoading: tripInfoController.isUpdatingStatus.value,
+                    isLoading: false,
                     onCompleted: () {
                       tripInfoController.advanceStage();
                     },
