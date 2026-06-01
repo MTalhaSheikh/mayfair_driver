@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../controllers/detail_controller.dart';
@@ -37,7 +38,68 @@ class DetailView extends StatelessWidget {
                     const Spacer(),
                     Text('Trip Details', style: AppTheme.sectionTitle),
                     const Spacer(),
-                    const SizedBox(width: 48), // balance back button
+                    // Copy all trip details button
+                    IconButton(
+                      onPressed: () {
+                        final buffer = StringBuffer();
+                        buffer.writeln('=== TRIP DETAILS ===');
+                        buffer.writeln('Date & Time: ${controller.scheduledLabel.value}');
+                        buffer.writeln('');
+                        buffer.writeln('PICKUP');
+                        buffer.writeln('${controller.pickupTitle.value}');
+                        if (controller.pickupSubtitle.value.isNotEmpty)
+                          buffer.writeln('${controller.pickupSubtitle.value}');
+                        buffer.writeln('');
+                        buffer.writeln('DROP-OFF');
+                        buffer.writeln('${controller.dropoffTitle.value}');
+                        if (controller.dropoffSubtitle.value.isNotEmpty)
+                          buffer.writeln('${controller.dropoffSubtitle.value}');
+                        buffer.writeln('');
+                        if (controller.distanceMiles.value > 0)
+                          buffer.writeln('Distance: ${controller.distanceMiles.value.toStringAsFixed(1)} miles');
+                        if (controller.durationMins.value > 0) {
+                          final hrs = controller.durationMins.value ~/ 60;
+                          final mins = controller.durationMins.value % 60;
+                          if (hrs > 0)
+                            buffer.writeln('Duration: ~${hrs}h ${mins}m');
+                          else
+                            buffer.writeln('Duration: ~${mins} mins');
+                        }
+                        if (controller.customerName.value.isNotEmpty &&
+                            controller.customerName.value != 'Customer') {
+                          buffer.writeln('');
+                          buffer.writeln('PASSENGER');
+                          buffer.writeln('Name: ${controller.customerName.value}');
+                          if (controller.customerPhone.value.isNotEmpty &&
+                              controller.customerPhone.value != 'No phone')
+                            buffer.writeln('Phone: ${controller.customerPhone.value}');
+                        }
+                        if (controller.flightNumber.value.isNotEmpty) {
+                          buffer.writeln('');
+                          buffer.writeln('Flight: ${controller.flightNumber.value}');
+                        }
+                        if (controller.notes.value.isNotEmpty &&
+                            controller.notes.value != 'No notes') {
+                          buffer.writeln('');
+                          buffer.writeln('Notes: ${controller.notes.value}');
+                        }
+
+                        Clipboard.setData(ClipboardData(text: buffer.toString()));
+                        Get.snackbar(
+                          'Copied!',
+                          'Trip details copied to clipboard',
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: AppColors.portalOlive,
+                          colorText: Colors.white,
+                          margin: const EdgeInsets.all(12),
+                          borderRadius: 12,
+                          icon: const Icon(Icons.check_circle, color: Colors.white),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_outlined),
+                      tooltip: 'Copy trip details',
+                    ),
                   ],
                 ),
 

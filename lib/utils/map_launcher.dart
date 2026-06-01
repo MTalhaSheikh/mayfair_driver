@@ -1,8 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Shows a bottom sheet letting the user pick Google Maps or Waze,
+/// Shows a bottom sheet letting the user pick Apple Maps, Google Maps or Waze,
 /// then opens the chosen app with navigation to [lat],[lng].
 Future<void> showMapChooser(
   BuildContext context, {
@@ -72,9 +73,32 @@ class _MapChooserSheet extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 20),
+
+            // Apple Maps — only on iOS
+            if (Platform.isIOS) ...[
+              _AppTile(
+                iconWidget: const Icon(Icons.map, color: Colors.white, size: 22),
+                iconBg: const Color(0xFF34C759),
+                title: 'Apple Maps',
+                subtitle: 'Open in Apple Maps',
+                onTap: () {
+                  Navigator.pop(context);
+                  _openAppleMaps(lat, lng, label);
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Google Maps
             _AppTile(
-              icon: 'G',
-              iconColor: Colors.white,
+              iconWidget: const Text(
+                'G',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               iconBg: const Color(0xFF4285F4),
               title: 'Google Maps',
               subtitle: 'Open in Google Maps',
@@ -84,9 +108,17 @@ class _MapChooserSheet extends StatelessWidget {
               },
             ),
             const SizedBox(height: 12),
+
+            // Waze
             _AppTile(
-              icon: 'W',
-              iconColor: Colors.white,
+              iconWidget: const Text(
+                'W',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               iconBg: const Color(0xFF05C8F7),
               title: 'Waze',
               subtitle: 'Open in Waze',
@@ -103,16 +135,14 @@ class _MapChooserSheet extends StatelessWidget {
 }
 
 class _AppTile extends StatelessWidget {
-  final String icon;
-  final Color iconColor;
+  final Widget iconWidget;
   final Color iconBg;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   const _AppTile({
-    required this.icon,
-    required this.iconColor,
+    required this.iconWidget,
     required this.iconBg,
     required this.title,
     required this.subtitle,
@@ -141,14 +171,7 @@ class _AppTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
-              child: Text(
-                icon,
-                style: TextStyle(
-                  color: iconColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              child: iconWidget,
             ),
             const SizedBox(width: 14),
             Column(
@@ -185,6 +208,24 @@ class _AppTile extends StatelessWidget {
   }
 }
 
+// ── Apple Maps ──────────────────────────────────────────────────────────────
+Future<void> _openAppleMaps(double lat, double lng, String label) async {
+  final encoded = Uri.encodeComponent(label);
+  final uri = Uri.parse(
+    'https://maps.apple.com/?daddr=$lat,$lng&q=$encoded&dirflg=d',
+  );
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    Get.snackbar(
+      'Cannot open',
+      'Apple Maps is not available on this device',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+}
+
+// ── Google Maps ─────────────────────────────────────────────────────────────
 Future<void> _openGoogleMaps(double lat, double lng, String label) async {
   final encoded = Uri.encodeComponent(label);
   final uri = Uri.parse(
@@ -201,11 +242,10 @@ Future<void> _openGoogleMaps(double lat, double lng, String label) async {
   }
 }
 
+// ── Waze ────────────────────────────────────────────────────────────────────
 Future<void> _openWaze(double lat, double lng) async {
   final uri = Uri.parse('waze://?ll=$lat,$lng&navigate=yes');
-  final fallback = Uri.parse(
-    'https://waze.com/ul?ll=$lat,$lng&navigate=yes',
-  );
+  final fallback = Uri.parse('https://waze.com/ul?ll=$lat,$lng&navigate=yes');
   try {
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched) {

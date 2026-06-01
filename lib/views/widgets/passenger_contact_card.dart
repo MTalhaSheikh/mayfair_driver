@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_theme.dart';
@@ -17,6 +19,20 @@ class PassengerContactCard extends StatelessWidget {
     this.onChat,
     this.onCall,
   });
+
+  void _copyPhone(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: phone));
+    Get.snackbar(
+      'Copied',
+      'Phone number copied to clipboard',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      backgroundColor: AppColors.portalOlive,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(12),
+      borderRadius: 12,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,23 +62,45 @@ class PassengerContactCard extends StatelessWidget {
             child: const Icon(Icons.person, color: Colors.black54, size: 20),
           ),
           const SizedBox(width: 14),
+
+          // Long press on name+phone area to copy number
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: AppTheme.locationTitle),
-                const SizedBox(height: 2),
-                Text(phone, style: AppTheme.welcomeSubtitle),
-              ],
+            child: GestureDetector(
+              onLongPress: () => _copyPhone(context),
+              child: Container(
+                color: Colors.transparent, // needed for gesture to work
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: AppTheme.locationTitle),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(phone, style: AppTheme.welcomeSubtitle),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.copy,
+                          size: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
+
           // Pickup sign button
           _IconButton(
             icon: Icons.contact_page_outlined,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => PickupSignScreen(passengerName: name),
+                  builder: (_) => PickupSignScreen(
+                  passengerName: name,
+                  companyName: 'MayFair Limousine',
+                ),
                   fullscreenDialog: true,
                 ),
               );

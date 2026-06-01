@@ -481,7 +481,12 @@ TripProgressStage? _stageFromStatus(String status) {
 
   @override
   void onClose() {
-    Get.find<LocationUpdateService>().setActiveTripId(null);
+    // Only clear tripId if trip is finished/completed
+    // Do NOT clear on back button — location should keep running for active trips
+    final currentStage = stage.value;
+    if (currentStage == TripProgressStage.finishedTrip) {
+      Get.find<LocationUpdateService>().setActiveTripId(null);
+    }
     super.onClose();
   }
 }

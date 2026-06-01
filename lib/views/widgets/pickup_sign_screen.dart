@@ -8,7 +8,7 @@ class PickupSignScreen extends StatefulWidget {
   const PickupSignScreen({
     super.key,
     required this.passengerName,
-    this.companyName = 'Mayfair Driver',
+    this.companyName = 'MayFair Limousine',
   });
 
   @override
@@ -32,6 +32,9 @@ class _PickupSignScreenState extends State<PickupSignScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get safe area top padding for proper close button placement
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Row(
@@ -49,48 +52,65 @@ class _PickupSignScreenState extends State<PickupSignScreen> {
                 quarterTurns: 3,
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
-                    widget.passengerName,
-                    style: const TextStyle(
-                      fontSize: 100,
-                      fontWeight: FontWeight.w300,
-                      color: Colors.black,
-                      letterSpacing: 1,
-                      height: 1.1,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      widget.passengerName,
+                      style: const TextStyle(
+                        fontSize: 100,
+                        fontWeight: FontWeight.w300,
+                        color: Colors.black,
+                        letterSpacing: 1,
+                        height: 1.1,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
             ),
           ),
 
-          // Black panel — company name rotated 90° counter-clockwise (bottom-to-top)
+          // Black panel — company name + close button
           Container(
             width: 120,
             color: Colors.black,
             child: Stack(
               children: [
-                // × close top-right
+                // ✕ close button — more padding from top + safe area
                 Positioned(
-                  top: 24,
+                  top: topPadding + 32,
                   right: 16,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: const Icon(Icons.close, color: Colors.white, size: 22),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
-                // Company name centered, rotated bottom-to-top
+
+                // Company name — centered, rotated bottom-to-top
                 Center(
                   child: RotatedBox(
                     quarterTurns: 3,
                     child: Text(
                       widget.companyName.toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
-                        letterSpacing: 6,
+                        letterSpacing: 5,
+                        height: 1.2,
                       ),
                       textAlign: TextAlign.center,
                     ),

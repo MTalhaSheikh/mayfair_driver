@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mayfair_driver/controllers/detail_controller.dart';
 import '../controllers/trip_info_controller.dart';
@@ -41,7 +42,65 @@ class TripInfoView extends StatelessWidget {
                       style: AppTheme.sectionTitle,
                     ),
                     const Spacer(),
-                    const SizedBox(width: 48), // balance back button
+                    // Copy all trip details button
+                    IconButton(
+                      onPressed: () {
+                        final buffer = StringBuffer();
+                        buffer.writeln('=== TRIP DETAILS ===');
+                        buffer.writeln('Date & Time: ${tripInfoController.scheduledLabel.value}');
+                        buffer.writeln('');
+                        buffer.writeln('PICKUP');
+                        buffer.writeln('${tripInfoController.pickupTitle.value}');
+                        if (tripInfoController.pickupSubtitle.value.isNotEmpty)
+                          buffer.writeln('${tripInfoController.pickupSubtitle.value}');
+                        buffer.writeln('');
+                        buffer.writeln('DROP-OFF');
+                        buffer.writeln('${tripInfoController.dropoffTitle.value}');
+                        if (tripInfoController.dropoffSubtitle.value.isNotEmpty)
+                          buffer.writeln('${tripInfoController.dropoffSubtitle.value}');
+                        buffer.writeln('');
+                        if (tripInfoController.distanceMiles.value > 0)
+                          buffer.writeln('Distance: ${tripInfoController.distanceMiles.value.toStringAsFixed(1)} miles');
+                        if (tripInfoController.durationMins.value > 0) {
+                          final hrs = tripInfoController.durationMins.value ~/ 60;
+                          final mins = tripInfoController.durationMins.value % 60;
+                          if (hrs > 0)
+                            buffer.writeln('Duration: ~${hrs}h ${mins}m');
+                          else
+                            buffer.writeln('Duration: ~${mins} mins');
+                        }
+                        if (tripInfoController.passengerName.value.isNotEmpty &&
+                            tripInfoController.passengerName.value != 'Customer') {
+                          buffer.writeln('');
+                          buffer.writeln('PASSENGER');
+                          buffer.writeln('Name: ${tripInfoController.passengerName.value}');
+                          if (tripInfoController.passengerPhone.value.isNotEmpty &&
+                              tripInfoController.passengerPhone.value != 'No phone')
+                            buffer.writeln('Phone: ${tripInfoController.passengerPhone.value}');
+                        }
+
+                        if (tripInfoController.notes.value.isNotEmpty &&
+                            tripInfoController.notes.value != 'No notes') {
+                          buffer.writeln('');
+                          buffer.writeln('Notes: ${tripInfoController.notes.value}');
+                        }
+
+                        Clipboard.setData(ClipboardData(text: buffer.toString()));
+                        Get.snackbar(
+                          'Copied!',
+                          'Trip details copied to clipboard',
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: AppColors.portalOlive,
+                          colorText: Colors.white,
+                          margin: const EdgeInsets.all(12),
+                          borderRadius: 12,
+                          icon: const Icon(Icons.check_circle, color: Colors.white),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_outlined),
+                      tooltip: 'Copy trip details',
+                    ),
                   ],
                 ),
 

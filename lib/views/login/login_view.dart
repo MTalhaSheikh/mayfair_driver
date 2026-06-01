@@ -192,26 +192,26 @@ class _DriverLoginScreenState extends State<_DriverLoginScreen> {
             ),
           ),
 
-          const SizedBox(height: 40),
-          const Divider(color: AppColors.divider),
-          const SizedBox(height: 16),
+          // const SizedBox(height: 40),
+          // const Divider(color: AppColors.divider),
+          // const SizedBox(height: 16),
 
-          // Help footer
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(
-                Icons.headset_mic_outlined,
-                size: 18,
-                color: AppColors.textSecondary,
-              ),
-              SizedBox(width: 8),
-              Text(
-                AppTexts.needHelp,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
+          // // Help footer
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.center,
+          //   children: const [
+          //     Icon(
+          //       Icons.headset_mic_outlined,
+          //       size: 18,
+          //       color: AppColors.textSecondary,
+          //     ),
+          //     // SizedBox(width: 8),
+          //     // Text(
+          //     //   AppTexts.needHelp,
+          //     //   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          //     // ),
+          //   ],
+          // ),
         ],
       ),
     );
