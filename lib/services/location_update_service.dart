@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,20 +13,21 @@ import '../controllers/login_controller.dart';
 import 'api_service.dart';
 
 /// Cross-platform background location service.
-/// Android: uses flutter_background_service (foreground service)
-/// iOS: uses geolocator position stream (native CLLocationManager)
-///
-/// ⚠️ Location is ONLY sent to API when there is an active trip (tripId != null).
+/// Android : flutter_background_service (foreground service + Timer)
+/// iOS     : Native CLLocationManager via AppDelegate MethodChannel
+///           → location updates sent directly from native side
+///           → no Dart Timer needed (Timer is suspended in iOS background)
 class LocationUpdateService extends GetxService {
-  // ── Android only ──────────────────────────────────────────────────────────
+  // ── Android ───────────────────────────────────────────────────────────────
   final FlutterBackgroundService _backgroundService = FlutterBackgroundService();
 
-  // ── iOS only ──────────────────────────────────────────────────────────────
-  StreamSubscription<Position>? _iosPositionStream;
-  Timer? _iosSendTimer;
-  Position? _iosLastPosition;
+  // ── iOS native channel ────────────────────────────────────────────────────
+  static const _channel = MethodChannel('com.mayfair.location');
+
+  // ── iOS state ─────────────────────────────────────────────────────────────
   String? _iosToken;
-  int? _iosActiveTripId;
+  int?    _iosActiveTripId;
+  DateTime _iosLastSent = DateTime.fromMillisecondsSinceEpoch(0);
 
   int? _activeTripId;
 
@@ -49,6 +51,75 @@ class LocationUpdateService extends GetxService {
         ),
       );
     }
+
+    if (Platform.isIOS) {
+      // Register channel handler immediately at app start
+      _channel.setMethodCallHandler(_handleNativeMethodCall);
+      debugPrint('iOS: channel handler registered');
+    }
+  }
+
+  // ── Ping native to verify channel works ──────────────────────────────────
+  Future<void> _verifyChannel() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('startBackgroundLocation');
+      debugPrint('iOS: channel ping result = $result');
+    } catch (e) {
+      debugPrint('iOS: channel ping error = $e');
+    }
+  }
+
+  // ── Handle native → Dart calls ────────────────────────────────────────────
+  Future<dynamic> _handleNativeMethodCall(MethodCall call) async {
+    if (call.method == 'onLocationUpdate') {
+      final data = Map<String, dynamic>.from(call.arguments as Map);
+      final lat  = (data['latitude']  as num).toDouble();
+      final lng  = (data['longitude'] as num).toDouble();
+
+      // Sync _iosActiveTripId with _activeTripId (in case setActiveTripId
+      // was called before _startIos set _iosActiveTripId)
+      _iosActiveTripId ??= _activeTripId;
+
+      debugPrint('iOS native location received: \$lat, \$lng | tripId: \$_iosActiveTripId | token: \${_iosToken != null ? "set" : "null"}');
+
+      if (_iosToken == null || _iosToken!.isEmpty) {
+        // Try to get token from LoginController
+        try {
+          final token = Get.find<LoginController>().authToken.value;
+          if (token.isNotEmpty) {
+            _iosToken = token;
+            debugPrint('iOS: token recovered from LoginController');
+          } else {
+            debugPrint('iOS: token empty — skipping send');
+            return;
+          }
+        } catch (e) {
+          debugPrint('iOS: cannot get token — $e');
+          return;
+        }
+      }
+
+      if (_iosActiveTripId == null) {
+        debugPrint('iOS: no active trip — skipping API send');
+        return;
+      }
+
+      // Throttle — send to API at most every 25 seconds
+      final now = DateTime.now();
+      if (now.difference(_iosLastSent).inSeconds < 25) {
+        debugPrint('iOS: throttled — skipping send');
+        return;
+      }
+      _iosLastSent = now;
+
+      await _sendLocationToApi(
+        token: _iosToken!,
+        latitude: lat,
+        longitude: lng,
+        tripId: _iosActiveTripId,
+      );
+      debugPrint('iOS sent location to API: $lat, $lng — trip: $_iosActiveTripId');
+    }
   }
 
   // ── Set active trip ───────────────────────────────────────────────────────
@@ -63,14 +134,23 @@ class LocationUpdateService extends GetxService {
       _iosActiveTripId = tripId;
       debugPrint('iOS LocationService: tripId set to $tripId');
 
-      // If trip ended (null) — stop the iOS stream to save battery
       if (tripId == null) {
-        await _iosPositionStream?.cancel();
-        _iosSendTimer?.cancel();
-        _iosPositionStream = null;
-        _iosSendTimer = null;
-        _iosLastPosition = null;
-        debugPrint('iOS LocationService: trip ended — stream stopped');
+        // Trip ended — stop native location updates
+        try {
+          await _channel.invokeMethod('stopBackgroundLocation');
+        } catch (e) {
+          debugPrint('iOS stop native error: $e');
+        }
+        _iosFallbackTimer?.cancel();
+        _iosFallbackTimer = null;
+        debugPrint('iOS LocationService: trip ended — native location stopped');
+      } else {
+        // New trip started — ensure native location is running
+        try {
+          await _channel.invokeMethod('startBackgroundLocation');
+        } catch (e) {
+          debugPrint('iOS start native error: $e');
+        }
       }
     }
   }
@@ -98,90 +178,51 @@ class LocationUpdateService extends GetxService {
     }
   }
 
-  // ── iOS start — native CLLocationManager via geolocator stream ────────────
+  // ── iOS fallback timer ───────────────────────────────────────────────────
+  Timer? _iosFallbackTimer;
+
+  // ── iOS start ─────────────────────────────────────────────────────────────
   Future<void> _startIos(String token) async {
     _iosToken = token;
     _iosActiveTripId = _activeTripId;
 
-    // Cancel any existing stream
-    await _iosPositionStream?.cancel();
-    _iosSendTimer?.cancel();
+    // Re-register channel handler in case it was reset
+    _channel.setMethodCallHandler(_handleNativeMethodCall);
+    debugPrint('iOS: channel handler re-registered in _startIos');
 
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // metres — update only when moved 10m
-    );
-
-    // Start position stream — iOS keeps this alive in background
-    // when Always Allow permission is granted
-    _iosPositionStream = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen(
-      (Position position) {
-        _iosLastPosition = position;
-        debugPrint(
-          'iOS position: ${position.latitude}, ${position.longitude}',
-        );
-      },
-      onError: (e) {
-        debugPrint('iOS position stream error: $e');
-      },
-    );
-
-    // Send to API every 30 seconds using a timer
-    _iosSendTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-      await _iosSendLocation();
-    });
-
-    // Send immediately on start if trip is active
-    if (_iosActiveTripId != null) {
-      await Future.delayed(const Duration(seconds: 2));
-      await _iosSendLocation();
-    }
-
-    debugPrint('iOS LocationService started');
-  }
-
-  // ── iOS — send latest position to API ─────────────────────────────────────
-  Future<void> _iosSendLocation() async {
-    if (_iosToken == null || _iosToken!.isEmpty) return;
-    if (_iosActiveTripId == null) {
-      debugPrint('iOS LocationService: no active trip — skipping send');
-      return;
-    }
-
+    // Start native CLLocationManager via AppDelegate
     try {
-      // Check permission before attempting to get position
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        debugPrint('iOS LocationService: permission denied ($permission) — requesting again');
-        // Try to re-request permission
-        await Geolocator.requestPermission();
-        return;
-      }
-
-      // Use cached position from stream if available and recent (< 60 sec old)
-      Position? position = _iosLastPosition;
-      if (position == null) {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        ).timeout(const Duration(seconds: 15));
-      }
-
-      await _sendLocationToApi(
-        token: _iosToken!,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        tripId: _iosActiveTripId,
-      );
-
-      debugPrint(
-        'iOS sent location: ${position.latitude}, ${position.longitude} — trip: $_iosActiveTripId',
-      );
+      final result = await _channel.invokeMethod<bool>('startBackgroundLocation');
+      debugPrint('iOS native CLLocationManager started — result: $result');
     } catch (e) {
-      debugPrint('iOS send location error: $e');
+      debugPrint('iOS native start error: $e');
     }
+
+    // Fallback timer — every 30s request fresh position via geolocator
+    // This ensures updates even when device hasn't moved (distanceFilter)
+    _iosFallbackTimer?.cancel();
+    _iosFallbackTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (_iosToken == null || _iosActiveTripId == null) return;
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).timeout(const Duration(seconds: 10));
+
+        final now = DateTime.now();
+        if (now.difference(_iosLastSent).inSeconds < 25) return;
+        _iosLastSent = now;
+
+        await _sendLocationToApi(
+          token: _iosToken!,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          tripId: _iosActiveTripId,
+        );
+        debugPrint('iOS fallback timer sent: ${position.latitude}, ${position.longitude} — trip: $_iosActiveTripId');
+      } catch (e) {
+        debugPrint('iOS fallback timer error: $e');
+      }
+    });
   }
 
   // ── Stop ──────────────────────────────────────────────────────────────────
@@ -191,12 +232,15 @@ class LocationUpdateService extends GetxService {
     if (Platform.isAndroid) {
       _backgroundService.invoke('stopService');
     } else if (Platform.isIOS) {
-      await _iosPositionStream?.cancel();
-      _iosSendTimer?.cancel();
-      _iosPositionStream = null;
-      _iosSendTimer = null;
-      _iosLastPosition = null;
-      _iosActiveTripId = null;
+      try {
+        await _channel.invokeMethod('stopBackgroundLocation');
+      } catch (e) {
+        debugPrint('iOS stop native error: $e');
+      }
+      _iosFallbackTimer?.cancel();
+      _iosFallbackTimer = null;
+      _iosToken           = null;
+      _iosActiveTripId    = null;
       debugPrint('iOS LocationService stopped');
     }
   }
@@ -205,7 +249,7 @@ class LocationUpdateService extends GetxService {
   Future<void> _requestPermissions() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // ── Notification ─────────────────────────────────────────────────────────
+    // Notification — show disclosure dialog only once
     final notifShown = prefs.getBool('notif_dialog_shown') ?? false;
     if (!notifShown && await Permission.notification.isDenied) {
       await _showNotificationDisclosureDialog();
@@ -215,39 +259,30 @@ class LocationUpdateService extends GetxService {
       await Permission.notification.request();
     }
 
-    // ── Location ─────────────────────────────────────────────────────────────
+    // Location — show disclosure dialog only once
     final locationShown = prefs.getBool('location_dialog_shown') ?? false;
-
-    // Step 1: Check current location permission status
     LocationPermission geoPermission = await Geolocator.checkPermission();
 
-    // Step 2: Show custom disclosure dialog only once
     if (!locationShown) {
       await _showLocationDisclosureDialog();
       await prefs.setBool('location_dialog_shown', true);
     }
 
-    // Step 3: Request "While Using" first (required by iOS before Always)
     if (geoPermission == LocationPermission.denied) {
       geoPermission = await Geolocator.requestPermission();
     }
 
-    // Step 4: On iOS — request "Always Allow" separately
-    // iOS requires "While Using" to be granted FIRST, then ask for Always
     if (Platform.isIOS) {
       if (geoPermission == LocationPermission.whileInUse) {
-        // Now request Always — iOS will show system prompt
         final alwaysStatus = await Permission.locationAlways.request();
         debugPrint('iOS locationAlways status: $alwaysStatus');
       }
     } else {
-      // Android — request locationAlways directly
       if (await Permission.locationAlways.isDenied) {
         await Permission.locationAlways.request();
       }
     }
 
-    // Log final status
     final finalPermission = await Geolocator.checkPermission();
     debugPrint('Final location permission: $finalPermission');
   }
@@ -279,8 +314,7 @@ class LocationUpdateService extends GetxService {
             SizedBox(height: 6),
             _DisclosureItem(
               icon: Icons.my_location,
-              text:
-                  'Show a persistent status bar indicator while location tracking is active during a trip.',
+              text: 'Show a persistent status bar indicator while location tracking is active during a trip.',
             ),
             SizedBox(height: 6),
             _DisclosureItem(
@@ -297,16 +331,14 @@ class LocationUpdateService extends GetxService {
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Not Now',
-                style: TextStyle(color: Colors.black54)),
+            child: const Text('Not Now', style: TextStyle(color: Colors.black54)),
           ),
           ElevatedButton(
             onPressed: () => Get.back(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7C8D3C),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Allow Notifications'),
           ),
@@ -338,14 +370,12 @@ class LocationUpdateService extends GetxService {
             SizedBox(height: 10),
             _DisclosureItem(
               icon: Icons.navigation,
-              text:
-                  'Share your real-time position with dispatch during active trips only.',
+              text: 'Share your real-time position with dispatch during active trips only.',
             ),
             SizedBox(height: 6),
             _DisclosureItem(
               icon: Icons.wifi_tethering,
-              text:
-                  'Continue tracking in the background while a trip is in progress.',
+              text: 'Continue tracking in the background while a trip is in progress.',
             ),
             SizedBox(height: 6),
             _DisclosureItem(
@@ -365,8 +395,7 @@ class LocationUpdateService extends GetxService {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7C8D3C),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Continue'),
           ),
@@ -378,7 +407,6 @@ class LocationUpdateService extends GetxService {
 
   @override
   void onClose() {
-    // Only stop if no active trip — keep location running during active trips
     if (_activeTripId == null) {
       stop();
     }
@@ -431,7 +459,6 @@ void onStart(ServiceInstance service) async {
       debugPrint('Android LocationService: no active trip — skipping');
       return;
     }
-
     try {
       final position = await _getPosition();
       if (position != null) {
@@ -444,8 +471,7 @@ void onStart(ServiceInstance service) async {
         if (service is AndroidServiceInstance) {
           service.setForegroundNotificationInfo(
             title: 'Mayfair Driver',
-            content:
-                'Trip active — ${DateTime.now().toString().substring(11, 16)}',
+            content: 'Trip active — ${DateTime.now().toString().substring(11, 16)}',
           );
         }
       }
@@ -470,8 +496,7 @@ Future<Position?> _getPosition() async {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) return null;
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+        desiredAccuracy: LocationAccuracy.high);
   } catch (e) {
     debugPrint('Get position error: $e');
     return null;

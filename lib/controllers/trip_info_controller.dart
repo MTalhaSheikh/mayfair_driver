@@ -145,6 +145,9 @@ class TripInfoController extends GetxController {
 
   /// True only if the driver has actually pressed "On the way". Do not use saved 'on_the_way' (we use that as fallback for pending).
   Future<bool> _isTripAlreadyStarted() async {
+    // Never start location for completed/finished trips
+    if (stage.value == TripProgressStage.finishedTrip) return false;
+
     if (stage.value == TripProgressStage.arrived ||
         stage.value == TripProgressStage.pickPassenger) {
       return true;
@@ -152,8 +155,13 @@ class TripInfoController extends GetxController {
     if (stage.value != TripProgressStage.onTheWay) return false;
     // API says they started
     if (_isStartedStatus(trip.status)) return true;
-    // Saved status from a real tap (arrived/picked_up/completed), not fallback 'on_the_way'
+    // Saved status from a real tap (arrived/picked_up) — but NOT completed
     final savedStatus = await _getSavedTripStatus(trip.id);
+    // If completed — clear it so next open starts fresh
+    if (savedStatus == 'completed') {
+      await _clearTripStatus(trip.id);
+      return false;
+    }
     return _isSavedStatusAfterStart(savedStatus);
   }
 
@@ -431,9 +439,9 @@ TripProgressStage? _stageFromStatus(String status) {
     update();
     await _saveTripStatusLocally(trip.id, localStatus);
 
-    if (nextStage == TripProgressStage.arrived) {
-      await Get.find<LocationUpdateService>().setActiveTripId(trip.id);
-    }
+    // Start location tracking as soon as driver takes any action on the trip
+    // This covers: onTheWay → arrived → pickPassenger
+    await Get.find<LocationUpdateService>().setActiveTripId(trip.id);
 
     Get.snackbar(
       snackTitle,
