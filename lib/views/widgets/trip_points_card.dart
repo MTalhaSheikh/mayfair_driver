@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_texts.dart';
@@ -65,6 +67,20 @@ class TripPointsCard extends StatelessWidget {
                       label: pickupTitle,
                     )
                 : null,
+            onLongPress: () {
+              final text = [pickupTitle, if (pickupSubtitle.isNotEmpty) pickupSubtitle].join('\n');
+              Clipboard.setData(ClipboardData(text: text));
+              Get.snackbar(
+                'Copied',
+                'Pickup address copied to clipboard',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+                backgroundColor: AppColors.portalOlive,
+                colorText: Colors.white,
+                margin: const EdgeInsets.all(12),
+                borderRadius: 12,
+              );
+            },
           ),
           const SizedBox(height: 14),
           _PointRow(
@@ -82,6 +98,20 @@ class TripPointsCard extends StatelessWidget {
                       label: dropoffTitle,
                     )
                 : null,
+            onLongPress: () {
+              final text = [dropoffTitle, if (dropoffSubtitle.isNotEmpty) dropoffSubtitle].join('\n');
+              Clipboard.setData(ClipboardData(text: text));
+              Get.snackbar(
+                'Copied',
+                'Drop-off address copied to clipboard',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+                backgroundColor: AppColors.portalOlive,
+                colorText: Colors.white,
+                margin: const EdgeInsets.all(12),
+                borderRadius: 12,
+              );
+            },
           ),
           if (miles != null || mins != null) ...[
             const SizedBox(height: 16),
@@ -145,6 +175,7 @@ class _PointRow extends StatelessWidget {
   final String subtitle;
   final bool showConnector;
   final VoidCallback? onMapTap;
+  final VoidCallback? onLongPress;
 
   const _PointRow({
     required this.markerColor,
@@ -154,6 +185,7 @@ class _PointRow extends StatelessWidget {
     required this.subtitle,
     required this.showConnector,
     this.onMapTap,
+    this.onLongPress,
   });
 
   @override
@@ -175,20 +207,26 @@ class _PointRow extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTheme.locationLabel.copyWith(
-                  color: AppColors.portalOlive,
-                ),
+          child: GestureDetector(
+            onLongPress: onLongPress,
+            child: Container(
+              color: Colors.transparent,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: AppTheme.locationLabel.copyWith(
+                      color: AppColors.portalOlive,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(title, style: AppTheme.locationTitle),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: AppTheme.locationSubtitle),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(title, style: AppTheme.locationTitle),
-              const SizedBox(height: 2),
-              Text(subtitle, style: AppTheme.locationSubtitle),
-            ],
+            ),
           ),
         ),
         // Map icon button — only shown when coordinates are available

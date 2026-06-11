@@ -110,9 +110,25 @@ class TripInfoView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          tripInfoController.scheduledLabel.value,
-                          style: AppTheme.tripTime,
+                        GestureDetector(
+                          onLongPress: () {
+                            Clipboard.setData(ClipboardData(
+                                text: tripInfoController.scheduledLabel.value));
+                            Get.snackbar(
+                              'Copied',
+                              'Date & time copied to clipboard',
+                              snackPosition: SnackPosition.BOTTOM,
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: AppColors.portalOlive,
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(12),
+                              borderRadius: 12,
+                            );
+                          },
+                          child: Text(
+                            tripInfoController.scheduledLabel.value,
+                            style: AppTheme.tripTime,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         TripPointsCard(
@@ -154,45 +170,61 @@ class TripInfoView extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 35,
-                                  height: 35,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.portalOlive.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    Icons.flight_outlined,
-                                    color: AppColors.portalOlive,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Flight Number',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                            child: GestureDetector(
+                              onLongPress: () {
+                                Clipboard.setData(ClipboardData(
+                                    text: detailController.flightNumber.value));
+                                Get.snackbar(
+                                  'Copied',
+                                  'Flight number copied to clipboard',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: AppColors.portalOlive,
+                                  colorText: Colors.white,
+                                  margin: const EdgeInsets.all(12),
+                                  borderRadius: 12,
+                                );
+                              },
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 35,
+                                    height: 35,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.portalOlive.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      detailController.flightNumber.value,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
+                                    child: Icon(
+                                      Icons.flight_outlined,
+                                      color: AppColors.portalOlive,
+                                      size: 20,
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Flight Number',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        detailController.flightNumber.value,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
@@ -214,49 +246,68 @@ class TripInfoView extends StatelessWidget {
                               ),
                             ],
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 35,
-                                height: 35,
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.note_outlined,
-                                  color: Colors.amber,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Notes',
-                                    style: AppTheme.titleMedium,
+                          child: GestureDetector(
+                            onLongPress: () {
+                              if (detailController.notes.value.isNotEmpty &&
+                                  detailController.notes.value != 'No notes') {
+                                Clipboard.setData(ClipboardData(
+                                    text: detailController.notes.value));
+                                Get.snackbar(
+                                  'Copied',
+                                  'Notes copied to clipboard',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: AppColors.portalOlive,
+                                  colorText: Colors.white,
+                                  margin: const EdgeInsets.all(12),
+                                  borderRadius: 12,
+                                );
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 35,
+                                  height: 35,
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  Text(
-                                    detailController.notes.value,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color:
-                                          detailController.notes.value ==
-                                              'No notes'
-                                          ? AppColors.textSecondary
-                                          : AppColors.textPrimary,
-                                      fontStyle:
-                                          detailController.notes.value ==
-                                              'No notes'
-                                          ? FontStyle.italic
-                                          : FontStyle.normal,
-                                      height: 1.5,
+                                  child: const Icon(
+                                    Icons.note_outlined,
+                                    color: Colors.amber,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Notes',
+                                      style: AppTheme.titleMedium,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                    Text(
+                                      detailController.notes.value,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color:
+                                            detailController.notes.value ==
+                                                'No notes'
+                                            ? AppColors.textSecondary
+                                            : AppColors.textPrimary,
+                                        fontStyle:
+                                            detailController.notes.value ==
+                                                'No notes'
+                                            ? FontStyle.italic
+                                            : FontStyle.normal,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -297,4 +348,3 @@ IconData _stageIcon(TripProgressStage stage) {
       return Icons.luggage_outlined;
   }
 }
-
