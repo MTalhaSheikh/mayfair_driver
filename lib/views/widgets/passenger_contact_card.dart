@@ -20,17 +20,63 @@ class PassengerContactCard extends StatelessWidget {
     this.onCall,
   });
 
-  void _copyPhone(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: phone));
+  void _copyValue(BuildContext context, String label, String value) {
+    Clipboard.setData(ClipboardData(text: value));
     Get.snackbar(
       'Copied',
-      'Phone number copied to clipboard',
+      '$label copied to clipboard',
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 2),
       backgroundColor: AppColors.portalOlive,
       colorText: Colors.white,
       margin: const EdgeInsets.all(12),
       borderRadius: 12,
+    );
+  }
+
+  void _showCopyOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.person_outline, color: AppColors.portalOlive),
+                title: const Text('Copy Name'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _copyValue(context, 'Name', name);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.call_outlined, color: AppColors.portalOlive),
+                title: const Text('Copy Phone Number'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _copyValue(context, 'Phone number', phone);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -63,10 +109,10 @@ class PassengerContactCard extends StatelessWidget {
           ),
           const SizedBox(width: 14),
 
-          // Long press on name+phone area to copy number
+          // Long press on name+phone area to choose: copy name or copy number
           Expanded(
             child: GestureDetector(
-              onLongPress: () => _copyPhone(context),
+              onLongPress: () => _showCopyOptions(context),
               child: Container(
                 color: Colors.transparent, // needed for gesture to work
                 child: Column(
